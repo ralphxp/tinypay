@@ -14,7 +14,7 @@ function Band(){
     }
 
     return(
-        <div className="center-align">
+        <div className="center-align card">
             <h1 className="text-animate"><img src='/img/lp.png' alt='tinyPay banner' className='col-md-8 col-lg-4 img' /></h1>
 
             
