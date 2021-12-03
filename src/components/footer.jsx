@@ -22,7 +22,7 @@ function Footer ()
 		                <h4>Contact Developer </h4>
 		                <p>
 			              <strong>Phone:</strong> <a href='tel:+2348023922707'>+234 802 392 2707</a> <br />
-			              <strong>Email:</strong> <a href='mailto:raphapanchi@gmail.com'>info@example.com</a><br />
+			              <strong>Email:</strong> <a href='mailto:raphapanchi@gmail.com'>raphapanchi@gmail.com</a><br />
 			            </p>
 		            </div>
 
