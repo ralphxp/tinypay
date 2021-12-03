@@ -1,5 +1,5 @@
 import {Link} from 'react-router-dom';
-import $ from 'jquery';
+// import $ from 'jquery';
 
 
 function Nav()
