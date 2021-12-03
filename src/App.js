@@ -1,26 +1,34 @@
-import {useState, useEffect} from 'react';
-import { BrowserRouter as Router} from 'react-router-dom';
+import {useEffect} from 'react';
+import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
+
 import './App.css';
 import Main from './components/main';
+import Home from './components/home';
 
 import Nav from './components/nav';
-import Footer from './components/footer';
-import Hero from './components/hero';
+import PaymentForm from './components/payment';
+// import Footer from './components/footer';
 
 function App() {
-
-  const [user, setUser] = useState({});
+  
 
   useEffect(()=>{
-
+    console.log(`
+       --------WELCOME----BACK--------
+    
+      `);
   });
 
   return (
     <Router>
       <Nav />
-      <Hero />
-      <Main />
-      <Footer />
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/processing' component={Main} />
+        <Route path='reciept' component={Main} />
+        <Route path='/payment' exact element={<PaymentForm />} />
+      </Routes>
+      
     </Router>
   );
 }

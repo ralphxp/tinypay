@@ -1,13 +1,15 @@
-import Bg from './bg';
-import Band from './band';
+import Main from './main';
+import Hero from './hero';
+import Footer from './footer';
 
 function Home()
 {
     return (
-        <>
-            <Bg />
-            <Band />
-        </>
+      <>
+        <Hero />
+        <Main />
+        <Footer />
+      </>
     );
 }
 
