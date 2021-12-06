@@ -38,17 +38,20 @@ function ProcessTx ()
           'Authorization': `Bearer ${SEC_KEY}`
         }
 
-        const url = `https://api.flutterwave.com/v3/transactions/${tx_id}/verify`
+        // const url = 
 
 
         var options = {
           'method': 'GET',
-          'url': url,
-          'headers': headers
+          'url': `https://api.flutterwave.com/v3/transactions/${tx_id}/verify`,
+          'headers': {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X`
+        }
         };
         request(options, function (error, response) { 
           if (error) throw new Error(error);
-          console.log(response.body);
+          console.log(response);
         });
         
       }
@@ -97,8 +100,9 @@ function ProcessTx ()
     <section id='hero' className='d-flex align-items-center justify-content-center contact section-bg'>
       <div className="col-lg-6 mt-4 mt-md-0">
         {msg?<><h1>Transaction Was successful </h1><p>A payment Reciept has been send to your email ({email}).<br /><b>Thank your</b></p></>:<></>}
+        <Link to='/' className="btn-get-started col-4">Got it</Link>
       </div>
-      <Link to='/' className="btn-get-started col-4">Got it</Link>
+      
     </section>
   );
 }
