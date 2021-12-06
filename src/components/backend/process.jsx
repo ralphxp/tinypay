@@ -3,12 +3,12 @@ import {Link} from 'react-router-dom';
 import { initializeApp } from "firebase/app";
 import { getDatabase, set, ref, get, child } from "firebase/database";
 
-const request = require('request');
+const axios = require('axios');
 
 
 function ProcessTx ()
 {
-  const SEC_KEY = "FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X";
+  // const SEC_KEY = "FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X";
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,26 +33,17 @@ function ProcessTx ()
 
         setTx_ref(params.get('tx_ref'));
         setTx_id(params.get('transaction_id'));
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SEC_KEY}`
-        }
+        
 
-        // const url = 
-
-
-        var options = {
-          'method': 'GET',
-          'url': `https://api.flutterwave.com/v3/transactions/${tx_id}/verify`,
-          'headers': {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X`
-        }
-        };
-        request(options, function (error, response) { 
-          if (error) throw new Error(error);
-          console.log(response);
+        axios('http://127.0.0.1:4500/?validate=true&tx_id='+tx_id)
+        .then(resp=>{
+          console.log(resp);
+        })
+        .catch(err=>{
+          console.log(err);
         });
+
+        
         
       }
     }
