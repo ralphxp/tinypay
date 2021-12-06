@@ -24,11 +24,11 @@ function Nav()
 
 	      <nav id="navbar" className="navbar">
 	        <ul>
-	          <li><Link className="nav-link active" to="/">Home</Link></li>
-	          <li><Link to="/payment">Pay Money</Link></li>
-	          <li><Link to="/verify">Verify Payment</Link></li>
+	          <li><Link className="nav-link active" to="/about">About</Link></li>
+	          {/*<li><Link to="/payment">Pay Money</Link></li>*/}
+	          {/*<li><Link to="/verify">Verify Payment</Link></li>
 	          <li><Link to="/reciept">Request Receipt</Link></li>
-	          <li><Link to="issues">Complain</Link></li>
+	          <li><Link to="issues">Complain</Link></li>*/}
 	        </ul>
 	        <i className="bi bi-list mobile-nav-toggle" onClick={toggle}></i>
 	      </nav>

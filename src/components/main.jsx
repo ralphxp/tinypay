@@ -1,15 +1,15 @@
 
 import {Routes, Route} from 'react-router-dom';
 import PaymentForm from './payment';
+import Footer from './footer';
 
 function Main()
 {
 	return(
-		<main id='main'>
-				<Routes>
-					<Route path='/payment' exact element={<PaymentForm />} />
-				</Routes>
-		</main>
+		<>
+		
+		<Footer />
+		</>
 	);
 }
 

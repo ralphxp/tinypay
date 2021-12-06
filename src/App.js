@@ -26,7 +26,7 @@ function App() {
         <Route path='//*' element={<Home />} />
         <Route path='/payment' element={<PaymentForm />} />
         <Route path='/processing' element={<ProcessTx />} />
-        <Route path='/reciept' element={<Main />} />
+        <Route path='/About' element={<Main />} />
       </Routes>
       
     </Router>
