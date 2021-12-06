@@ -2,7 +2,8 @@ import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import { initializeApp } from "firebase/app";
 import { getDatabase, set, ref, get, child } from "firebase/database";
-const axios = require('axios');
+
+const request = require('request');
 
 
 function ProcessTx ()
@@ -39,9 +40,16 @@ function ProcessTx ()
 
         const url = `https://api.flutterwave.com/v3/transactions/${tx_id}/verify`
 
-        fetch(url, headers )
-          .then(response => response.json())
-          .then(data => console.log(data));
+
+        var options = {
+          'method': 'GET',
+          'url': url,
+          'headers': headers
+        };
+        request(options, function (error, response) { 
+          if (error) throw new Error(error);
+          console.log(response.body);
+        });
         
       }
     }
@@ -88,8 +96,9 @@ function ProcessTx ()
 	return (
     <section id='hero' className='d-flex align-items-center justify-content-center contact section-bg'>
       <div className="col-lg-6 mt-4 mt-md-0">
-        <h1>{msg?<>Transaction Was successful <Link to='/' className="btn-get-started">Back</Link></>:<></>}</h1>
+        {msg?<><h1>Transaction Was successful </h1><p>A payment Reciept has been send to your email ({email}).<br /><b>Thank your</b></p></>:<></>}
       </div>
+      <Link to='/' className="btn-get-started col-4">Got it</Link>
     </section>
   );
 }
