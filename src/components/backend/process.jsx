@@ -106,7 +106,7 @@ function ProcessTx ()
 	return (
     <section id='hero' className='d-flex align-items-center justify-content-center contact section-bg'>
       <div className="col-lg-6 mt-4 mt-md-0">
-        {msg?<><h1>Transaction Was successful </h1><p>A payment Reciept has been send to your email ({email}).<br /><b>Thank your</b></p></>:<></>}
+        {msg?<><h1>Transaction Was successful </h1><p>A payment Reciept has been send to your email ({email}).<br /><b>Thank you.</b></p></>:<></>}
         <Link to='/' className="btn-get-started col-4">Got it</Link>
       </div>
       
