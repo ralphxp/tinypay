@@ -10,11 +10,11 @@ function ProcessTx ()
 {
   // const SEC_KEY = "FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X";
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [tx_ref, setTx_ref] = useState('');
-  const [tx_id, setTx_id] = useState('');
+  // const [name, setName] = useState('');
+  const [email, setEmail] = useState('***@gmail.com');
+  // const [phone, setPhone] = useState('');
+  // const [tx_ref, setTx_ref] = useState('');
+  // const [tx_id, setTx_id] = useState('');
   const [status, setStatus] = useState('');
   const [msg, setMsg] = useState(true);
   const [ok, setOk] = useState(['successful', 'done', 'ok', 'verified', 'completed']);
@@ -31,17 +31,33 @@ function ProcessTx ()
       {
         setMsg(true);
 
-        setTx_ref(params.get('tx_ref'));
-        setTx_id(params.get('transaction_id'));
+        // setTx_ref(params.get('tx_ref'));
+        // setTx_id(params.get('transaction_id'));
         
+        // const xhr = new XMLHttpRequest();
+        // xhr.open('GET', 'https://api.flutterwave.com/v3/transactions'+tx_id+'/verify');
+        // xhr.setRequestHeader('Authorization', SEC_KEY);
+        // xhr.setRequestHeader('Content-Type', 'application/json');
+        // xhr.onreadystatechange = ()=>{
+        //   if(xhr.readyState == 4)
+        //   {
+        //     console.log(xhr.response)
+        //   }
+        // };
+        // xhr.send(null);
 
-        axios('http://127.0.0.1:4500/?validate=true&tx_id='+tx_id)
-        .then(resp=>{
-          console.log(resp);
-        })
-        .catch(err=>{
-          console.log(err);
-        });
+        // axios('https://petpaths.000webhostapp.com/auth/?validate=true&tx_id='+tx_id,
+        //   headers: { 
+        //     'Access-Control-Allow-Origin' : '*',
+        //     'Access-Control-Allow-Methods':'GET,PUT,POST,DELETE,PATCH,OPTIONS',
+        //   }
+        // )
+        // .then(resp=>{
+        //   console.log(resp);
+        // })
+        // .catch(err=>{
+        //   console.log(err);
+        // });
 
         
         
