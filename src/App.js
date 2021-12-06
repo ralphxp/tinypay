@@ -7,7 +7,6 @@ import Home from './components/home';
 
 import Nav from './components/nav';
 import PaymentForm from './components/payment';
-// import Footer from './components/footer';
 
 function App() {
   
@@ -24,9 +23,9 @@ function App() {
       <Nav />
       <Routes>
         <Route path='/' element={<Home />} />
-        <Route path='/processing' component={Main} />
-        <Route path='reciept' component={Main} />
-        <Route path='/payment' exact element={<PaymentForm />} />
+        <Route path='/payment' element={<PaymentForm />} />
+        <Route path='/processing' element={<Main />} />
+        <Route path='reciept' element={<Main />} />
       </Routes>
       
     </Router>
