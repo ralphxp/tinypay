@@ -1,10 +1,54 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
+import {Link} from 'react-router-dom';
 import { initializeApp } from "firebase/app";
 import { getDatabase, set, ref, get, child } from "firebase/database";
+const axios = require('axios');
 
 
 function ProcessTx ()
 {
+  const SEC_KEY = "FLWSECK_TEST-f3ed6a94918305960db00d15a34052ce-X";
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [tx_ref, setTx_ref] = useState('');
+  const [tx_id, setTx_id] = useState('');
+  const [status, setStatus] = useState('');
+  const [msg, setMsg] = useState(true);
+  const [ok, setOk] = useState(['successful', 'done', 'ok', 'verified', 'completed']);
+
+  useEffect(()=>{
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+
+    if(typeof params.get('status') === 'string')
+    {
+      setStatus(params.get('status'));
+
+      if(ok.includes(status))
+      {
+        setMsg(true);
+
+        setTx_ref(params.get('tx_ref'));
+        setTx_id(params.get('transaction_id'));
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SEC_KEY}`
+        }
+
+        const url = `https://api.flutterwave.com/v3/transactions/${tx_id}/verify`
+
+        fetch(url, headers )
+          .then(response => response.json())
+          .then(data => console.log(data));
+        
+      }
+    }
+
+
+  });
+
 	var firebaseConfig = {
     apiKey: "AIzaSyCEe_F84tWMld0krlGB0qBGPwlO0MpOIbc",
     authDomain: "tinypay-d15ab.firebaseapp.com",
@@ -41,7 +85,13 @@ function ProcessTx ()
       console.error(error);
     });
   }
-	return <>Done</>;
+	return (
+    <section id='hero' className='d-flex align-items-center justify-content-center contact section-bg'>
+      <div className="col-lg-6 mt-4 mt-md-0">
+        <h1>{msg?<>Transaction Was successful <Link to='/' className="btn-get-started">Back</Link></>:<></>}</h1>
+      </div>
+    </section>
+  );
 }
 
 

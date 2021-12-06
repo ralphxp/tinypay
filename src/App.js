@@ -7,6 +7,7 @@ import Home from './components/home';
 
 import Nav from './components/nav';
 import PaymentForm from './components/payment';
+import ProcessTx from './components/backend/process';
 
 function App() {
   
@@ -15,17 +16,17 @@ function App() {
     console.log(`
        --------WELCOME----BACK--------
     
-      `);
+    `);
   });
 
   return (
     <Router>
       <Nav />
       <Routes>
-        <Route path='/' element={<Home />} />
+        <Route path='//*' element={<Home />} />
         <Route path='/payment' element={<PaymentForm />} />
-        <Route path='/processing' element={<Main />} />
-        <Route path='reciept' element={<Main />} />
+        <Route path='/processing' element={<ProcessTx />} />
+        <Route path='/reciept' element={<Main />} />
       </Routes>
       
     </Router>

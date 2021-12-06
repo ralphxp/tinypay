@@ -1,31 +1,29 @@
-// import {useState} from 'react';
+import {useState} from 'react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 
 
 function PaymentForm()
 {
-	const data = {
-		amount : '',
-		name : '',
-		email : '',
-		phone : '',
-		merchant : '',
-	}
+	
+	const [name, setName] = useState('');
+	const [email, setEmail] = useState('');
+	const [phone, setPhone] = useState('');
+	const [amount, setAmount] = useState();
 
 	const config = {
     public_key: "FLWPUBK_TEST-70e05402741f9baf2c17e85880ed64f2-X",
     tx_ref: "TX"+new Date().getTime()+"NPC_BK",
-    amount: 200,
+    amount : amount,
     currency: "NGN",
     payment_options: " ",
     redirect_url: "http://127.0.0.1:3000/processing",
     meta: {
-      amount : (data.amount === 'new')? 3700:2200,
+      amount : amount,
     },
     customer: {
-      email: data.email,
-      phone_number: data.phone,
-      name: data.name,
+      email: email,
+      phone_number: phone,
+      name: name,
     },
     callback: function (data) {
       console.log(data);
@@ -36,7 +34,7 @@ function PaymentForm()
     customizations: {
       title: "Nacos Plasu",
       description: "Payment for Departmental Dues",
-      logo: "http://nacosplasuchapter.com.ng/img/logo/nacos_logo_white.jpg",
+      logo: "/img/nacos.jpg",
     },
 				    
   };
@@ -45,7 +43,9 @@ function PaymentForm()
 
 	const handleData = (e)=>{
 		
-		data[e.target.name] = e.target.value
+		// data[e.target.name] = e.target.value
+
+		return e;
 		
 	}
 
@@ -76,19 +76,19 @@ function PaymentForm()
 	        </div>
           <div className="row mb-2">
             <div className="col-md-6 form-group">
-              <input type="text" name="name" onChange={(e)=>config.customer.name = e.target.value} className="form-control" placeholder="Your Name" required />
+              <input type="text" name="name" onChange={(e)=>setName(e.target.value)} className="form-control" placeholder="Your Name" required />
             </div>
             <div className="col-md-6 form-group mt-3 mt-md-0">
-              <input type="email" className="form-control" onChange={(e)=>config.customer.email = e.target.value} name="email" placeholder="Your Email" required />
+              <input type="email" className="form-control" onChange={(e)=>setEmail(e.target.value)} name="email" placeholder="Your Email" required />
             </div>
           </div>
 
           <div className="row mt-3">
             <div className="col-md-6 form-group">
-              <input type="tel" name="phone" onChange={(e)=>config.customer.phone_number = e.target.value} className="form-control"  placeholder="Your Phone Number" required />
+              <input type="tel" name="phone" onChange={(e)=>setPhone(e.target.value)} className="form-control"  placeholder="Your Phone Number" required />
             </div>
             <div className="col-md-6 form-group mt-3 mt-md-0">
-              <select className="form-control text-center" onChange={(e)=>config.amount = (e.target.value === 'new')?37200:2200} name="amount" required >
+              <select className="form-control text-center" onChange={(e)=>setAmount((e.target.value === 'new')?3700:2200)} name="amount" required >
               	<option value=''>---Select amount---</option>
               	<option value='new'>For New Student</option>
               	<option value='old'>For Old Student</option>
