@@ -16,7 +16,7 @@ function PaymentForm()
     amount : amount,
     currency: "NGN",
     payment_options: " ",
-    redirect_url: "http://127.0.0.1:3000/processing",
+    redirect_url: "https://tinypay.netlify.app",
     meta: {
       amount : amount,
     },
@@ -26,7 +26,7 @@ function PaymentForm()
       name: name,
     },
     callback: function (data) {
-      console.log(data);
+      alert("Transaction has been processed you will recieve and email notification at "+email)
     },
     onclose: function() {
       // close modal
