@@ -41,14 +41,6 @@ function PaymentForm()
 
   const handleFlutter = useFlutterwave(config);
 
-	const handleData = (e)=>{
-		
-		// data[e.target.name] = e.target.value
-
-		return e;
-		
-	}
-
 	const SubmitData = e=>{
 		e.preventDefault();
 		console.log(config)
@@ -58,17 +50,17 @@ function PaymentForm()
 				closePaymentModal();
 			},
 			onClose : ()=>{}
-		})
+		});
 	}
 
 	return (<>
-		<section id='hero' className='d-flex align-items-center justify-content-center contact section-bg'>
+		<section id='hero' className='d-flex align-items-center justify-content-center contact section-bg mt-2'>
 		  <div className="col-lg-6 mt-4 mt-md-0">
         <form onSubmit={SubmitData} className="php-email-form">
 
         	<div className='row'>
 	          <div className="col mb-3">
-	            <select className="form-control text-center" onChange={handleData} name="dept" required >
+	            <select className="form-control text-center"  name="dept" required >
 	            	<option value=''>Who Do you Want to Pay</option>
 	            	<option value='merchant'>Computer Science Department PLASUB</option>
 	            </select>

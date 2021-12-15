@@ -5,7 +5,7 @@ function Footer ()
 	return(
 		<>
 
-		<footer id="footer">
+		<footer id="footer" className='fotter mt-2'>
 
 		    <div className="footer-top">
 		      <div className="container">
