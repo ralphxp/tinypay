@@ -23,10 +23,10 @@ function App() {
     <>
       <Nav />
       <Routes>
-        <Route path='//*' element={<Home />} />
-        <Route path='/payment' element={<PaymentForm />} />
-        <Route path='/processing' element={<ProcessTx />} />
-        <Route path='/About' element={<Main />} />
+        <Route path='//*' exact element={<Home />} />
+        <Route path='/payment' exact element={<PaymentForm />} />
+        <Route path='/processing' exact element={<ProcessTx />} />
+        <Route path='/About' exact element={<Main />} />
       </Routes>
       
     </>
