@@ -12,12 +12,7 @@ import ProcessTx from './components/backend/process';
 function App() {
   
 
-  useEffect(()=>{
-    console.log(`
-       --------WELCOME----BACK--------
-    
-    `);
-  });
+  
 
   return (
     <>
