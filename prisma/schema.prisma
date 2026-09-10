@@ -1,0 +1,448 @@
+// TinyPay domain model — see docs/SPEC.md section 5.
+// Money is always BIGINT minor units. Timestamps are UTC. Refs are ULIDs (generated in app code).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Identity & auth ----------
+
+enum UserStatus {
+  active
+  suspended
+  closed
+}
+
+model User {
+  id        String     @id @default(cuid())
+  phone     String     @unique
+  fullName  String?    @map("full_name")
+  email     String?
+  kycTier   Int        @default(1) @map("kyc_tier")
+  status    UserStatus @default(active)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  // Paystack DVA funding: the webhook only gives us the PSP's customer code,
+  // so we need this mapping to know which wallet to credit.
+  paystackCustomerCode String? @unique @map("paystack_customer_code")
+  dvaAccountNumber     String? @unique @map("dva_account_number")
+
+  // Telegram identifies senders by numeric user id, not phone — this maps a
+  // returning chat back to the phone-keyed identity after first contact-share.
+  telegramUserId String? @unique @map("telegram_user_id")
+
+  credential          Credential?
+  webauthnCredentials WebauthnCredential[]
+  bvnVerification     BvnVerification?
+  beneficiaries       Beneficiary[]
+  groupMemberships    GroupMember[]
+  mandates            Mandate[]
+  proposalsCreated    Proposal[]           @relation("ProposalCreatedBy")
+  proposalActions     ProposalAction[]
+  transactions        Transaction[]
+  poolRoundsAsPayee   PoolRound[]
+
+  @@map("users")
+}
+
+model Credential {
+  userId          String  @id @map("user_id")
+  // PIN gates money movement in chat; passwordHash (if set) is only for the
+  // separate web/dashboard login — kept apart per docs/SPEC.md section 6.
+  pinHash         String? @map("pin_hash")
+  passwordHash    String? @map("password_hash")
+  securityQ       String? @map("security_q")
+  securityAHash   String? @map("security_a_hash")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credentials")
+}
+
+model WebauthnCredential {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  credentialId String   @unique @map("credential_id")
+  publicKey    Bytes    @map("public_key")
+  counter      BigInt   @default(0)
+  deviceLabel  String?  @map("device_label")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("webauthn_credentials")
+}
+
+enum BvnVerificationStatus {
+  pending
+  verified
+  failed
+}
+
+model BvnVerification {
+  userId     String                 @id @map("user_id")
+  bvnToken   String                 @map("bvn_token")
+  status     BvnVerificationStatus  @default(pending)
+  verifiedAt DateTime?              @map("verified_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bvn_verifications")
+}
+
+model Beneficiary {
+  id           String @id @default(cuid())
+  userId       String @map("user_id")
+  alias        String
+  account      String
+  bankCode     String @map("bank_code")
+  resolvedName String @map("resolved_name")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("beneficiaries")
+}
+
+// ---------- Ledger (core) ----------
+
+enum OwnerType {
+  user
+  group
+  system
+}
+
+enum AccountKind {
+  wallet
+  pool
+  psp_settlement
+  fees
+  revenue
+  suspense
+}
+
+enum AccountStatus {
+  active
+  frozen
+  closed
+}
+
+enum CurrencyCode {
+  NGN
+  USD
+}
+
+model Account {
+  id        String        @id @default(cuid())
+  ownerType OwnerType     @map("owner_type")
+  ownerId   String        @map("owner_id")
+  kind      AccountKind
+  currency  CurrencyCode
+  status    AccountStatus @default(active)
+
+  postings Posting[]
+  balance  Balance?
+
+  @@index([ownerType, ownerId])
+  @@map("accounts")
+}
+
+enum JournalEntryKind {
+  fund
+  transfer
+  contribute
+  disburse
+  withdraw
+  reversal
+  fee
+}
+
+enum JournalEntryStatus {
+  pending
+  posted
+  reversed
+}
+
+model JournalEntry {
+  id          String             @id @default(cuid())
+  externalRef String             @unique @map("external_ref")
+  kind        JournalEntryKind
+  status      JournalEntryStatus @default(pending)
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  postings     Posting[]
+  transactions Transaction[]
+
+  @@map("journal_entries")
+}
+
+model Posting {
+  id          String   @id @default(cuid())
+  entryId     String   @map("entry_id")
+  accountId   String   @map("account_id")
+  amountMinor BigInt   @map("amount_minor")
+  currency    CurrencyCode
+  groupId     String?  @map("group_id")
+  roundId     String?  @map("round_id")
+  memberId    String?  @map("member_id")
+
+  entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account Account      @relation(fields: [accountId], references: [id])
+  group   Group?       @relation(fields: [groupId], references: [id])
+  round   PoolRound?   @relation(fields: [roundId], references: [id])
+
+  @@index([entryId])
+  @@index([accountId])
+  @@index([groupId])
+  @@index([roundId])
+  @@map("postings")
+}
+
+/// Cache only. Mutated exclusively under `SELECT ... FOR UPDATE` in the same
+/// transaction as the postings that change it — never the source of truth.
+model Balance {
+  accountId   String   @id @map("account_id")
+  amountMinor BigInt   @default(0) @map("amount_minor")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("balances")
+}
+
+enum TransactionType {
+  fund
+  transfer
+  contribute
+  disburse
+  withdraw
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  reversed
+}
+
+model Transaction {
+  id             String             @id @default(cuid())
+  ref            String             @unique
+  userId         String             @map("user_id")
+  type           TransactionType
+  amountMinor    BigInt             @map("amount_minor")
+  status         TransactionStatus  @default(pending)
+  pspRef         String?            @map("psp_ref")
+  idempotencyKey String             @unique @map("idempotency_key")
+  journalEntryId String?            @map("journal_entry_id")
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  user         User          @relation(fields: [userId], references: [id])
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  @@index([userId])
+  @@map("transactions")
+}
+
+model KycTier {
+  tier           Int    @id
+  singleTxnCap   BigInt @map("single_txn_cap")
+  dailyCap       BigInt @map("daily_cap")
+  balanceCap     BigInt @map("balance_cap")
+
+  @@map("kyc_tiers")
+}
+
+// ---------- Groups & pools ----------
+
+enum Channel {
+  telegram
+  whatsapp
+}
+
+enum GroupStatus {
+  active
+  archived
+}
+
+model Group {
+  id             String      @id @default(cuid())
+  chatRef        String      @map("chat_ref")
+  channel        Channel
+  name           String
+  createdBy      String      @map("created_by")
+  disbursePolicy Json        @map("disburse_policy")
+  status         GroupStatus @default(active)
+
+  members   GroupMember[]
+  mandates  Mandate[]
+  rounds    PoolRound[]
+  proposals Proposal[]
+  postings  Posting[]
+
+  @@unique([channel, chatRef])
+  @@map("groups")
+}
+
+enum GroupRole {
+  admin
+  treasurer
+  member
+}
+
+model GroupMember {
+  groupId  String    @map("group_id")
+  userId   String    @map("user_id")
+  role     GroupRole @default(member)
+  joinedAt DateTime  @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+enum MandateStatus {
+  active
+  revoked
+  expired
+}
+
+model Mandate {
+  id        String         @id @default(cuid())
+  groupId   String         @map("group_id")
+  userId    String         @map("user_id")
+  capMinor  BigInt         @map("cap_minor")
+  cadence   String
+  status    MandateStatus  @default(active)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([userId])
+  @@map("mandates")
+}
+
+enum PoolRoundStatus {
+  open
+  closed
+  paid_out
+  cancelled
+}
+
+model PoolRound {
+  id          String          @id @default(cuid())
+  groupId     String          @map("group_id")
+  seq         Int
+  targetMinor BigInt          @map("target_minor")
+  payeeUserId String          @map("payee_user_id")
+  status      PoolRoundStatus @default(open)
+  opensAt     DateTime        @map("opens_at")
+  closesAt    DateTime        @map("closes_at")
+
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payee    User      @relation(fields: [payeeUserId], references: [id])
+  postings Posting[]
+
+  @@unique([groupId, seq])
+  @@map("pool_rounds")
+}
+
+enum ProposalKind {
+  disburse
+  collect
+}
+
+enum ProposalStatus {
+  pending
+  approved
+  rejected
+  executed
+  expired
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  groupId     String         @map("group_id")
+  kind        ProposalKind
+  amountMinor BigInt         @map("amount_minor")
+  dest        String
+  ref         String         @unique
+  quorum      Int
+  status      ProposalStatus @default(pending)
+  createdBy   String         @map("created_by")
+  expiresAt   DateTime       @map("expires_at")
+
+  group   Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User             @relation("ProposalCreatedBy", fields: [createdBy], references: [id])
+  actions ProposalAction[]
+
+  @@index([groupId])
+  @@map("proposals")
+}
+
+enum ProposalActionKind {
+  paid
+  approved
+  rejected
+}
+
+model ProposalAction {
+  proposalId String             @map("proposal_id")
+  userId     String             @map("user_id")
+  kind       ProposalActionKind
+  decidedAt  DateTime           @default(now()) @map("decided_at")
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@id([proposalId, userId])
+  @@map("proposal_actions")
+}
+
+// ---------- Reference & control ----------
+
+model Bank {
+  code    String   @id
+  name    String
+  aliases String[]
+
+  @@map("banks")
+}
+
+model ProcessedWebhookEvent {
+  eventId     String   @id @map("event_id")
+  provider    String
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@map("processed_webhook_events")
+}
+
+model IdempotencyKey {
+  key       String   @id
+  scope     String
+  response  Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("idempotency_keys")
+}
+
+model AuditLog {
+  id     String   @id @default(cuid())
+  actor  String
+  action String
+  entity String
+  ref    String
+  at     DateTime @default(now())
+
+  @@index([entity, ref])
+  @@map("audit_log")
+}
