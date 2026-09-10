@@ -49,3 +49,10 @@ export class InvalidVerbContextError extends DomainError {
     super(message, 'INVALID_VERB_CONTEXT_ERROR');
   }
 }
+
+/** reverse(ref) was called for a journal entry that doesn't exist. */
+export class LedgerEntryNotFoundError extends DomainError {
+  constructor(message: string) {
+    super(message, 'LEDGER_ENTRY_NOT_FOUND_ERROR');
+  }
+}

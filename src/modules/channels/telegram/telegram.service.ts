@@ -3,7 +3,7 @@ import { Bot, type Context } from 'grammy';
 import type { Update } from 'grammy/types';
 import { ConfigService } from '../../../config/config.service.js';
 import { UserService } from '../../identity/user.service.js';
-import { ConversationService } from '../../conversation/conversation.service.js';
+import { CommandHandlerService } from '../../conversation/command-handler.service.js';
 import { normalizePhone } from '../../nlu/normalizer.js';
 import type { ChannelPort, OutboundMessage } from '../channel.port.js';
 
@@ -18,7 +18,7 @@ export class TelegramService implements ChannelPort, OnModuleInit {
   constructor(
     config: ConfigService,
     private readonly users: UserService,
-    private readonly conversation: ConversationService,
+    private readonly conversation: CommandHandlerService,
   ) {
     const token = config.get('TELEGRAM_BOT_TOKEN');
     this.bot = token ? new Bot(token) : undefined;

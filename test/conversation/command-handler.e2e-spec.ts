@@ -6,7 +6,7 @@ import { ConfigModule } from '../../src/config/config.module.js';
 import { PrismaModule } from '../../src/infra/database/prisma.module.js';
 import { RedisModule } from '../../src/infra/redis/redis.module.js';
 import { ConversationModule } from '../../src/modules/conversation/conversation.module.js';
-import { ConversationService } from '../../src/modules/conversation/conversation.service.js';
+import { CommandHandlerService } from '../../src/modules/conversation/command-handler.service.js';
 import { LedgerService } from '../../src/modules/wallet/ledger.service.js';
 import { PinService } from '../../src/modules/auth/pin.service.js';
 
@@ -25,9 +25,9 @@ async function createTestUser(): Promise<string> {
   return user.id;
 }
 
-describe('ConversationService (e2e)', () => {
+describe('CommandHandlerService (e2e)', () => {
   let moduleRef: TestingModule;
-  let conversation: ConversationService;
+  let conversation: CommandHandlerService;
   let ledger: LedgerService;
   let pin: PinService;
 
@@ -36,7 +36,7 @@ describe('ConversationService (e2e)', () => {
       imports: [ConfigModule, PrismaModule, RedisModule, ConversationModule],
     }).compile();
 
-    conversation = moduleRef.get(ConversationService);
+    conversation = moduleRef.get(CommandHandlerService);
     ledger = moduleRef.get(LedgerService);
     pin = moduleRef.get(PinService);
   });
