@@ -9,11 +9,18 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: pnpm install --frozen-lockfile && pnpm exec prisma migrate deploy && pnpm run build
+    # corepack enable is needed because Render's Node image only ships npm/yarn
+    # by default — without it, `pnpm` isn't on PATH at all. SKIP_INSTALL_DEPS
+    # stops Render's own implicit `npm install` from running first (which is
+    # what actually broke the first deploy: it installed without devDependencies,
+    # so `nest` — the build tool, from @nestjs/cli — was never on disk).
+    buildCommand: corepack enable; pnpm install --frozen-lockfile; pnpm exec prisma migrate deploy; pnpm run build;
     startCommand: node dist/main
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SKIP_INSTALL_DEPS
+        value: true
       - key: APP_BASE_URL
         sync: false
       - key: DATABASE_URL
