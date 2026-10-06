@@ -23,23 +23,11 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
 
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://tinypay:tinypay@localhost:5432/tinypay
-      REDIS_URL: redis://localhost:6379
       APP_BASE_URL: http://localhost:3000
-      JWT_SECRET: ci-test-secret-please-override-me-32
-      ENCRYPTION_KEY: ci-test-secret-please-override-me-32
 
     steps:
       - uses: actions/checkout@v4

@@ -6,8 +6,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 
 async function bootstrap() {
   // rawBody:true preserves the unparsed request body so webhook signature
-  // verification (Paystack HMAC-SHA512, Stripe constructEvent, WA app secret)
-  // can run against exactly the bytes the provider signed.
+  // verification (Paystack HMAC-SHA512) can run against exactly the bytes
+  // the provider signed.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalFilters(new AllExceptionsFilter());

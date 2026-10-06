@@ -9,5 +9,9 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    // The database is a remote Supabase instance (no local docker Postgres
+    // in this build) — the default 5s timeout is too tight for a cold
+    // connection pool's first few round trips.
+    testTimeout: 20_000,
   },
 });

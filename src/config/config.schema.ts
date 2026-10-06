@@ -6,21 +6,12 @@ export const configSchema = z.object({
   APP_BASE_URL: z.url(),
 
   DATABASE_URL: z.url(),
-  REDIS_URL: z.url(),
-
-  JWT_SECRET: z.string().min(32),
-  ENCRYPTION_KEY: z.string().min(32),
-
-  WEBAUTHN_RP_ID: z.string().optional(),
-  WEBAUTHN_RP_NAME: z.string().optional(),
-  WEBAUTHN_ORIGIN: z.string().optional(),
 
   PAYSTACK_SECRET_KEY: z.string().optional(),
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
-  PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
 
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  BIGISUB_API_TOKEN: z.string().optional(),
+  BIGISUB_TRANSACTION_PIN: z.string().optional(),
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
@@ -30,15 +21,6 @@ export const configSchema = z.object({
   WA_ACCESS_TOKEN: z.string().optional(),
   WA_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
   WA_APP_SECRET: z.string().optional(),
-  WA_FLOW_ENCRYPTION_KEY: z.string().optional(),
-
-  LLM_PROVIDER: z.string().optional(),
-  LLM_API_KEY: z.string().optional(),
-  LLM_MODEL: z.string().optional(),
-  LLM_MONTHLY_CAP_USD: z.coerce.number().nonnegative().optional(),
-
-  BVN_PROVIDER: z.string().optional(),
-  BVN_API_KEY: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof configSchema>;

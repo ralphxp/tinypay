@@ -1,49 +1,33 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import type { Redis } from 'ioredis';
-import { REDIS_CLIENT } from '../../infra/redis/redis.module.js';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../infra/database/prisma.service.js';
 import type { Session } from './types.js';
 
-const LOCK_PREFIX = 'lock:';
 const SESSION_TTL_MS = 10 * 60 * 1000;
 
-// Atomically checks the lock token before deleting — never release a lock
-// acquired by a different holder (e.g. one whose own lock already expired
-// and was re-acquired by someone else).
-const RELEASE_SCRIPT = `
-if redis.call('GET', KEYS[1]) == ARGV[1] then
-  return redis.call('DEL', KEYS[1])
-else
-  return 0
-end
-`;
+interface SessionRow {
+  data: Session | null;
+  version: number;
+}
 
-// Atomically checks the stored session's version before overwriting it —
-// the classic compare-and-swap, so a slower concurrent writer (one that
-// already passed the mutex, e.g. after its lock TTL expired mid-processing)
-// can never clobber a newer write with a stale one.
-const SAVE_SCRIPT = `
-local current = redis.call('GET', KEYS[1])
-local currentVersion = 0
-if current then
-  local decoded = cjson.decode(current)
-  currentVersion = decoded.v
-end
-if currentVersion ~= tonumber(ARGV[1]) then
-  return nil
-end
-redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3])
-return ARGV[2]
-`;
+interface LockRow {
+  lockToken: string;
+}
 
 /**
  * Pure state + locking for the conversation FSM — no business logic here.
  * Sessions are transient and non-authoritative for money (guiding principle
  * #1): everything this class holds can be lost without losing a kobo.
+ *
+ * No Redis in this build — session data, the optimistic-concurrency version,
+ * and the per-session mutex all live in one `conversation_sessions` row
+ * (ConversationSession model), using Postgres's `INSERT ... ON CONFLICT ...
+ * DO UPDATE ... WHERE` as the atomic compare-and-swap/compare-and-acquire
+ * primitive in place of Redis's Lua scripts.
  */
 @Injectable()
 export class StateStore {
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   fresh(): Session {
     const now = Date.now();
@@ -51,9 +35,14 @@ export class StateStore {
   }
 
   async load(key: string): Promise<Session | null> {
-    const raw = await this.redis.get(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as Session;
+    const rows = await this.prisma.$queryRaw<SessionRow[]>`
+      SELECT data, version
+      FROM conversation_sessions
+      WHERE key = ${key} AND (expires_at IS NULL OR expires_at > now())
+    `;
+    const row = rows[0];
+    if (!row?.data) return null;
+    return row.data;
   }
 
   /**
@@ -65,35 +54,57 @@ export class StateStore {
    */
   async save(key: string, session: Session, ifVersion: number): Promise<Session | null> {
     const toPersist: Session = { ...session, v: ifVersion + 1, updatedAt: Date.now() };
-    const result = await this.redis.eval(
-      SAVE_SCRIPT,
-      1,
-      key,
-      ifVersion,
-      JSON.stringify(toPersist),
-      SESSION_TTL_MS,
-    );
-    return result === null ? null : toPersist;
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    const data = JSON.stringify(toPersist);
+
+    const rows = await this.prisma.$queryRaw<SessionRow[]>`
+      INSERT INTO conversation_sessions AS cs (key, data, version, expires_at, updated_at)
+      VALUES (${key}, ${data}::jsonb, 1, ${expiresAt}, now())
+      ON CONFLICT (key) DO UPDATE
+        SET data = ${data}::jsonb,
+            version = cs.version + 1,
+            expires_at = ${expiresAt},
+            updated_at = now()
+        WHERE cs.version = ${ifVersion}
+      RETURNING data, version
+    `;
+    return rows[0]?.data ? toPersist : null;
   }
 
   /** Deletes the session outright — used to simulate/force expiry in tests, and by explicit "cancel". */
   async clear(key: string): Promise<void> {
-    await this.redis.del(key);
+    await this.prisma.$executeRaw`DELETE FROM conversation_sessions WHERE key = ${key}`;
   }
 
   /**
-   * Acquires a short-lived per-session mutex via SET NX PX, returning a
-   * random token the holder must present to release() — so a holder can
-   * never release a lock it doesn't own (e.g. one it held that already
-   * expired and was re-acquired by another process).
+   * Acquires a short-lived per-session mutex, returning a random token the
+   * holder must present to release() — so a holder can never release a lock
+   * it doesn't own (e.g. one it held that already expired and was
+   * re-acquired by another process). Succeeds if the row has no lock, or its
+   * lock already expired.
    */
   async acquire(key: string, ttlMs: number): Promise<string | null> {
     const token = randomUUID();
-    const result = await this.redis.set(`${LOCK_PREFIX}${key}`, token, 'PX', ttlMs, 'NX');
-    return result === null ? null : token;
+    const lockExpiresAt = new Date(Date.now() + ttlMs);
+
+    const rows = await this.prisma.$queryRaw<LockRow[]>`
+      INSERT INTO conversation_sessions AS cs (key, lock_token, lock_expires_at, updated_at)
+      VALUES (${key}, ${token}, ${lockExpiresAt}, now())
+      ON CONFLICT (key) DO UPDATE
+        SET lock_token = ${token},
+            lock_expires_at = ${lockExpiresAt},
+            updated_at = now()
+        WHERE cs.lock_token IS NULL OR cs.lock_expires_at < now()
+      RETURNING lock_token AS "lockToken"
+    `;
+    return rows[0] ? token : null;
   }
 
   async release(key: string, token: string): Promise<void> {
-    await this.redis.eval(RELEASE_SCRIPT, 1, `${LOCK_PREFIX}${key}`, token);
+    await this.prisma.$executeRaw`
+      UPDATE conversation_sessions
+      SET lock_token = NULL, lock_expires_at = NULL, updated_at = now()
+      WHERE key = ${key} AND lock_token = ${token}
+    `;
   }
 }

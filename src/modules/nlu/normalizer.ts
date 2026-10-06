@@ -1,57 +1,65 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infra/database/prisma.service.js';
+import type { Network } from '@prisma/client';
+import { StepError } from '../../common/errors/domain-errors.js';
 
-/** "5,000" / "₦5000" / "5k" / "5000 naira" -> minor units (kobo). */
-export function parseAmountToMinor(rawText: string): bigint | null {
-  let cleaned = rawText
+/**
+ * The sole owner of canonicalization. Grammar only ever emits raw strings
+ * (amountRaw, networkRaw...); nothing upstream of this file is allowed to
+ * turn "500" into a bigint or "mtn" into a Network enum value. These
+ * functions own rejection, via StepError, so a bad value re-prompts the
+ * current FSM step instead of reaching a slot.
+ */
+
+const NAIRA_WORDS = /naira|ngn/gi;
+const THOUSAND_SUFFIX = /k$/i;
+
+/** "500" / "₦5,000" / "5k" -> minor units (kobo). Rejects non-positive or unparseable amounts. */
+export function parseAmountMinor(amountRaw: string): bigint {
+  let cleaned = amountRaw
     .trim()
     .toLowerCase()
     .replace(/₦/g, '')
-    .replace(/naira|ngn/g, '')
+    .replace(NAIRA_WORDS, '')
     .replace(/,/g, '')
     .trim();
 
+  if (!cleaned) {
+    throw new StepError('Enter an amount, e.g. 500 or 5k.');
+  }
+
   let multiplier = 1;
-  if (cleaned.endsWith('k')) {
+  if (THOUSAND_SUFFIX.test(cleaned)) {
     multiplier = 1000;
-    cleaned = cleaned.slice(0, -1).trim();
+    cleaned = cleaned.replace(THOUSAND_SUFFIX, '').trim();
   }
 
-  const value = Number(cleaned);
-  if (!Number.isFinite(value) || value <= 0) return null;
-
-  return BigInt(Math.round(value * multiplier * 100));
-}
-
-/** Nigerian local (0...) or +234/234-prefixed numbers -> E.164 (+234...). */
-export function normalizePhone(rawText: string): string {
-  const digits = rawText.replace(/[^\d+]/g, '');
-  if (digits.startsWith('+')) return digits;
-  if (digits.startsWith('234')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+234${digits.slice(1)}`;
-  return `+${digits}`;
-}
-
-/** Nigerian phones are 11 digits locally or 13 with a 234 country code; NUBAN
- * account numbers are always exactly 10 digits with no country code. */
-export function isLikelyPhoneNumber(rawText: string): boolean {
-  if (rawText.startsWith('+')) return true;
-  const digits = rawText.replace(/\D/g, '');
-  return digits.length === 11 || digits.length === 13;
-}
-
-@Injectable()
-export class NormalizerService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  /** Resolves a bank name/alias/code (e.g. "gtb", "GTBank", "058") to its code. */
-  async resolveBankCode(rawText: string): Promise<string | null> {
-    const needle = rawText.trim().toLowerCase();
-    const bank = await this.prisma.bank.findFirst({
-      where: {
-        OR: [{ name: { equals: needle, mode: 'insensitive' } }, { aliases: { has: needle } }, { code: needle }],
-      },
-    });
-    return bank?.code ?? null;
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) {
+    throw new StepError(`"${amountRaw}" isn't a clear amount — try something like 500 or 5k.`);
   }
+
+  const value = Number(cleaned) * multiplier;
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new StepError('Enter an amount greater than zero.');
+  }
+
+  return BigInt(Math.round(value * 100));
+}
+
+const NETWORK_ALIASES: Record<string, Network> = {
+  mtn: 'mtn',
+  glo: 'glo',
+  airtel: 'airtel',
+  '9mobile': 'nine_mobile',
+  '9-mobile': 'nine_mobile',
+  ninemobile: 'nine_mobile',
+  'nine mobile': 'nine_mobile',
+};
+
+/** "mtn" / "9mobile" / "Airtel" -> the Network enum value. Rejects anything unrecognized. */
+export function normalizeNetwork(networkRaw: string): Network {
+  const needle = networkRaw.trim().toLowerCase().replace(/\s+/g, ' ');
+  const network = NETWORK_ALIASES[needle] ?? NETWORK_ALIASES[needle.replace(/\s/g, '')];
+  if (!network) {
+    throw new StepError(`I don't recognize the network "${networkRaw}" — try MTN, Glo, Airtel, or 9mobile.`);
+  }
+  return network;
 }

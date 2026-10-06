@@ -15,44 +15,27 @@ export class StepError extends DomainError {
   }
 }
 
-/** Redis session lock could not be acquired (concurrent advance() on same session). */
-export class LockError extends DomainError {
-  constructor(message = 'Could not acquire session lock') {
-    super(message, 'LOCK_ERROR');
+/** Wallet debit (airtime/data purchase) would take the balance below zero. */
+export class InsufficientBalanceError extends DomainError {
+  constructor(message = 'Insufficient wallet balance') {
+    super(message, 'INSUFFICIENT_BALANCE_ERROR');
   }
 }
 
-/** KYC tier cap (single/daily/balance) would be breached by this posting. */
-export class TierLimitError extends DomainError {
-  constructor(message: string) {
-    super(message, 'TIER_LIMIT_ERROR');
-  }
+/** What a channel needs to send an onboarding DM/link — never sent by the guard itself. */
+export interface OnboardingHandoff {
+  reason: 'not_enrolled';
+  onboardingUrl: string;
 }
 
-/** Journal entry postings do not sum to zero. Treat as sev-1. */
-export class LedgerImbalanceError extends DomainError {
-  constructor(message: string) {
-    super(message, 'LEDGER_IMBALANCE_ERROR');
-  }
-}
-
-/** Actor lacks the role/auth required by the resolver for this action. */
-export class UnauthorizedActionError extends DomainError {
-  constructor(message: string) {
-    super(message, 'UNAUTHORIZED_ACTION_ERROR');
-  }
-}
-
-/** Verb was invoked from a surface/context it isn't valid for (e.g. `contribute` in a DM). */
-export class InvalidVerbContextError extends DomainError {
-  constructor(message: string) {
-    super(message, 'INVALID_VERB_CONTEXT_ERROR');
-  }
-}
-
-/** reverse(ref) was called for a journal entry that doesn't exist. */
-export class LedgerEntryNotFoundError extends DomainError {
-  constructor(message: string) {
-    super(message, 'LEDGER_ENTRY_NOT_FOUND_ERROR');
+/**
+ * Thrown by EnrollmentGuard when an inbound event's sender phone has no
+ * User record — "known user?" only. Every debit still needs its own wallet-
+ * balance check on top of this; enrollment is never transaction
+ * authorization.
+ */
+export class NotEnrolledError extends DomainError {
+  constructor(public readonly handoff: OnboardingHandoff) {
+    super('Sender is not an enrolled TinyPay user', 'NOT_ENROLLED_ERROR');
   }
 }

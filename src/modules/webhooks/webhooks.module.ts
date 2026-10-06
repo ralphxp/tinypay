@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { QueueModule } from '../../infra/queue/queue.module.js';
+import { WalletModule } from '../wallet/wallet.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { PaystackWebhookController } from './paystack.controller.js';
 
 @Module({
-  imports: [QueueModule],
+  imports: [WalletModule, NotificationsModule],
   controllers: [PaystackWebhookController],
 })
 export class WebhooksModule {}

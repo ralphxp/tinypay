@@ -1,0 +1,34 @@
+# Render Blueprint — lets Render auto-detect this service when you connect
+# the repo (New -> Blueprint), instead of configuring it by hand. Secrets
+# (DATABASE_URL, PAYSTACK_*, BIGISUB_*, TELEGRAM_*) are deliberately left
+# out of here — set those in the Render dashboard (Environment tab) after
+# the service is created, never committed to the repo.
+services:
+  - type: web
+    name: tinypay
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm exec prisma migrate deploy && pnpm run build
+    startCommand: node dist/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: BIGISUB_API_TOKEN
+        sync: false
+      - key: BIGISUB_TRANSACTION_PIN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false

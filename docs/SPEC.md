@@ -1,3 +1,10 @@
+> **Superseded.** The product was narrowed to: Telegram/WhatsApp bot, fund via
+> Paystack Checkout, buy airtime/data via Bigisub, balance + history. No
+> transfers, no group-finance/pools, no WebAuthn/PIN, no LLM NLU, no
+> Redis/BullMQ. See [README.md](../README.md) for the current scope — this
+> document is kept only as historical context for the broader design this
+> was scoped down from.
+
 # TinyPay — Backend Requirements & Foundation Spec
 
 **Status:** draft v0.1 · **Owner:** Codizium Integrated Services

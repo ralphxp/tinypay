@@ -1,14 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { createTransferFlow } from './flows/transfer.flow.js';
-import { RECIPIENT_RESOLVER_PORT, type RecipientResolverPort } from './ports/recipient-resolver.port.js';
-import { EXECUTOR_PORT, type ExecutorPort } from './ports/executor.port.js';
+import { createFundFlow } from './flows/fund.flow.js';
+import { createAirtimeFlow } from './flows/airtime.flow.js';
+import { createDataFlow } from './flows/data.flow.js';
+import { WalletService } from '../wallet/wallet.service.js';
+import { PaystackProvider } from '../payments/paystack/paystack.provider.js';
+import { BILLER_PORT, type BillerPort } from '../payments/biller.port.js';
+import { NOTIFICATION_SINK, type NotificationSink } from '../notifications/notification.port.js';
 import type { FlowDef } from './types.js';
 
-export type FlowName = 'transfer';
+export type FlowName = 'fund' | 'airtime' | 'data';
 
 /** InboundEvent.kind values that start a fresh flow when the session is idle. */
 export const FLOW_START_KINDS: Record<string, FlowName> = {
-  start_transfer: 'transfer',
+  start_fund: 'fund',
+  start_airtime: 'airtime',
+  start_data: 'data',
 };
 
 @Injectable()
@@ -16,11 +22,15 @@ export class FlowRegistry {
   private readonly flows: Record<FlowName, FlowDef>;
 
   constructor(
-    @Inject(RECIPIENT_RESOLVER_PORT) recipientResolver: RecipientResolverPort,
-    @Inject(EXECUTOR_PORT) executor: ExecutorPort,
+    wallet: WalletService,
+    paystack: PaystackProvider,
+    @Inject(BILLER_PORT) biller: BillerPort,
+    @Inject(NOTIFICATION_SINK) notifications: NotificationSink,
   ) {
     this.flows = {
-      transfer: createTransferFlow({ recipientResolver, executor }),
+      fund: createFundFlow({ wallet, paystack }),
+      airtime: createAirtimeFlow({ wallet, biller, notifications }),
+      data: createDataFlow({ wallet, biller, notifications }),
     };
   }
 

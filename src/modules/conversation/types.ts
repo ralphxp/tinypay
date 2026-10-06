@@ -1,4 +1,26 @@
-export type ChannelName = 'telegram_dm' | 'telegram_group' | 'whatsapp_dm';
+import type { Surface } from '../../shared/types/surface.js';
+import type { OutboundMessage } from '../../shared/types/outbound-message.js';
+export type { OutboundMessage } from '../../shared/types/outbound-message.js';
+
+export type ChannelName = 'telegram_dm' | 'telegram_group' | 'whatsapp_dm' | 'whatsapp_group';
+
+/**
+ * Raw inbound text from a channel — the entry point for the full
+ * EnrollmentGuard -> InvocationGate -> NLU -> FSM pipeline. `senderPhone` is
+ * the join key (guiding principle), not a userId — the channel is
+ * responsible for having already resolved its own native sender identifier
+ * (a Telegram chat user id, say) to a phone before calling in; see
+ * EnrollmentGuard for the "known user?" gate that turns this phone into a
+ * userId for everything downstream.
+ */
+export interface HandleTextInput {
+  senderPhone: string;
+  channel: ChannelName;
+  surface: Surface;
+  text: string;
+  /** Group-surface context — only used for addressing (wake-word/@mention); no group-finance features exist in this build. */
+  groupId?: string;
+}
 
 /**
  * FSM session — transient and non-authoritative for money (guiding
@@ -29,12 +51,6 @@ export interface InboundEvent {
   payload?: Record<string, unknown>;
 }
 
-/** Channel-agnostic reply — rendering/sending into a real channel is a later slice. */
-export interface OutboundMessage {
-  text: string;
-  choices?: string[];
-}
-
 export interface StepDef {
   /** Validates the event against the current step; throws StepError to re-prompt. Returns slots to merge. */
   validate(
@@ -62,4 +78,12 @@ export interface FlowDef {
   /** Terminal step ids — reaching one of these ends the flow (advance() returns to idle after). */
   terminal: string[];
   steps: Record<string, StepDef>;
+  /**
+   * Ordered, non-auto steps and the single slot each one fills — lets
+   * "seed & jump" (NLU-driven flow entry) find the first step whose slot
+   * isn't already known from parsed entities, without running any step's
+   * side effects to find out. A step whose slot can never be pre-filled
+   * from parse (e.g. an explicit confirmation) simply never gets skipped.
+   */
+  slotSteps: { step: string; slot: string }[];
 }
