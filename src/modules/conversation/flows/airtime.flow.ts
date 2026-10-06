@@ -94,7 +94,7 @@ export function createAirtimeFlow(deps: AirtimeFlowDeps): FlowDef {
           const network = session.slots.network as Network;
           const amountMinor = BigInt(session.slots.amountMinor as string);
           const recipientPhone = session.slots.recipientPhone as string;
-          const ref = `tinypay:${ulid()}`;
+          const ref = `tinypay-${ulid()}`;
 
           let reservation;
           try {

@@ -56,7 +56,7 @@ export function createFundFlow(deps: FundFlowDeps): FlowDef {
         next: async (session) => {
           const userId = session.slots.userId as string;
           const amountMinor = BigInt(session.slots.amountMinor as string);
-          const ref = `tinypay:${ulid()}`;
+          const ref = `tinypay-${ulid()}`;
 
           await deps.wallet.reserveFund({ userId, ref, amountMinor });
 

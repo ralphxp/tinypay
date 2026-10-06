@@ -142,7 +142,7 @@ export function createDataFlow(deps: DataFlowDeps): FlowDef {
           const planCode = session.slots.planCode as string;
           const amountMinor = BigInt(session.slots.priceMinor as string);
           const recipientPhone = session.slots.recipientPhone as string;
-          const ref = `tinypay:${ulid()}`;
+          const ref = `tinypay-${ulid()}`;
 
           let reservation;
           try {
