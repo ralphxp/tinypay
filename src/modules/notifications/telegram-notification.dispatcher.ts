@@ -4,6 +4,13 @@ import { NETWORK_LABEL } from '../../shared/utils/network-label.js';
 import { formatNaira } from '../../shared/utils/format-money.js';
 import type { NotificationIntent, NotificationSink } from './notification.port.js';
 
+/**
+ * Customer-facing copy only — never interpolates a provider's raw error
+ * text (account balances, internal field names, provider identity) into
+ * what a user reads. `reason` on a purchase_failed intent is for the audit
+ * trail (WalletTransaction.failureReason) and server logs only; see emit()
+ * below for where it actually goes.
+ */
 function copyFor(intent: NotificationIntent): string {
   switch (intent.kind) {
     case 'wallet_funded':
@@ -12,8 +19,10 @@ function copyFor(intent: NotificationIntent): string {
       const label = intent.type === 'airtime' ? 'Airtime' : 'Data';
       return `${label} sent: ${formatNaira(intent.amountMinor)} ${NETWORK_LABEL[intent.network]} to ${intent.recipientPhone}.`;
     }
-    case 'purchase_failed':
-      return `${intent.type === 'airtime' ? 'Airtime' : 'Data'} purchase failed and was refunded: ${intent.reason}`;
+    case 'purchase_failed': {
+      const label = intent.type === 'airtime' ? 'Airtime' : 'Data';
+      return `${label} purchase failed and was refunded.`;
+    }
   }
 }
 
@@ -33,6 +42,12 @@ export class TelegramNotificationDispatcher implements NotificationSink {
   constructor(private readonly sender: TelegramSenderService) {}
 
   emit(intent: NotificationIntent): void {
+    if (intent.kind === 'purchase_failed') {
+      // Server-side only — the provider's raw reason (balances, field
+      // names, provider identity) must never reach the customer, but it's
+      // still the thing an operator needs to actually diagnose a failure.
+      this.logger.warn(`purchase_failed ref=${intent.ref} userId=${intent.userId}: ${intent.reason}`);
+    }
     const text = copyFor(intent);
     this.sender.sendToUser(intent.userId, { text }).catch((err: unknown) => {
       this.logger.error(`Failed to deliver ${intent.kind} notification to user ${intent.userId}`, err);
