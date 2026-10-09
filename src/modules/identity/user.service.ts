@@ -35,10 +35,15 @@ export class UserService {
   }
 
   /** Resolves the user for a phone number, creating a bare (unenrolled) record if new. */
-  async findOrCreateByPhone(phone: string): Promise<User> {
+  async findOrCreateByPhone(phone: string, fullName?: string): Promise<User> {
     const existing = await this.findByPhone(phone);
     if (existing) return existing;
-    return this.create({ phone });
+    return this.create({ phone, fullName });
+  }
+
+  /** Set once by the onboarding flow (flows/onboarding.flow.ts) — never asked for again. */
+  async updateEmail(userId: string, email: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { email } });
   }
 
   /**

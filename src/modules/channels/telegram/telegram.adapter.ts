@@ -132,11 +132,16 @@ export class TelegramAdapter implements ChannelPort, OnModuleInit {
     }
 
     const phone = normalizePhone(contact.phone_number);
-    const user = await this.users.findOrCreateByPhone(phone);
+    // Telegram's contact card carries the sharer's name for free — no need
+    // to ask separately (the onboarding flow below only asks for email,
+    // which a phone number can never give us).
+    const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || undefined;
+    const user = await this.users.findOrCreateByPhone(phone, fullName);
     await this.users.linkTelegramUserId(user.id, String(message.from.id));
-    await this.bot!.api.sendMessage(message.chat.id, "You're all set. Try 'tinypay balance'.", {
-      reply_markup: { remove_keyboard: true },
-    });
+
+    const reply = await this.conversation.seedOnboarding(user.id, 'telegram_dm');
+    const text = reply?.text ?? "You're all set. Try 'tinypay balance'.";
+    await this.bot!.api.sendMessage(message.chat.id, text, { reply_markup: { remove_keyboard: true } });
   }
 
   private async handleTextMessage(update: Update): Promise<void> {

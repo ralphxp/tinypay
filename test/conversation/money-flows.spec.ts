@@ -365,6 +365,28 @@ describe('Money flows: fund / airtime / data, end to end through ConversationSer
     });
   });
 
+  describe('onboarding', () => {
+    it('seedOnboarding asks for an email; an invalid reply re-prompts, a valid one is saved and completes', async () => {
+      const phone = await enrolledPhone();
+      const user = await users.findByPhone(phone);
+
+      const seeded = await conversation.seedOnboarding(user!.id, 'telegram_dm');
+      expect(seeded?.text).toMatch(/email/i);
+
+      const invalid = await conversation.handleText(dm(phone, 'not an email'));
+      expect(invalid?.text).toMatch(/doesn't look like an email/i);
+
+      const done = await conversation.handleText(dm(phone, 'Rapha@Example.com'));
+      expect(done?.text).toMatch(/all set/i);
+
+      const updated = await users.findByPhone(phone);
+      expect(updated?.email).toBe('rapha@example.com'); // lowercased
+
+      const session = await stateStore.load(`fsm:${user!.id}:telegram_dm`);
+      expect(session?.flow).toBeNull(); // terminal step resets to idle
+    });
+  });
+
   describe('interrupts', () => {
     it('cancel mid-flow returns to idle without charging anything', async () => {
       const phone = await enrolledPhone();

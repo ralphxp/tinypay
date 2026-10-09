@@ -163,6 +163,16 @@ export class ConversationService {
     }
   }
 
+  /**
+   * Seeds the onboarding flow (flows/onboarding.flow.ts) — called by a
+   * channel adapter right after it first links a phone to a user (Telegram's
+   * contact-share, WhatsApp's auto-enroll), not reached through NLU/intent
+   * dispatch like the money flows are.
+   */
+  seedOnboarding(userId: string, channel: ChannelName): Promise<OutboundMessage | undefined> {
+    return this.seedFlow(sessionKey({ userId, channel }), 'onboarding', { userId });
+  }
+
   private async handleBalanceQuery(ctx: ResolvedContext): Promise<OutboundMessage> {
     const balance = await this.wallet.getBalance(ctx.userId);
     return { text: `Your wallet balance is ${formatNaira(balance)}.` };
