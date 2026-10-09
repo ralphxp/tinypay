@@ -129,7 +129,7 @@ export class ConversationService {
     const peeked = await this.stateStore.load(key);
     const isActiveFlow = peeked?.flow != null;
 
-    const gateResult = this.gate.check({ surface: input.surface, isActiveFlow, text: input.text });
+    const gateResult = this.gate.check({ surface: input.surface, text: input.text });
     if (!gateResult.addressed) return undefined;
 
     const utterance = gateResult.utterance;

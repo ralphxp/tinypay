@@ -27,8 +27,6 @@ export function matchInterrupt(utterance: string): 'cancel' | 'help' | 'menu' | 
 
 export interface GateInput {
   surface: Surface;
-  /** Whether this session already has an active flow — from a cheap session peek, not the locked read inside advance(). */
-  isActiveFlow: boolean;
   text: string;
 }
 
@@ -44,16 +42,18 @@ export function scrubPin(utterance: string): string {
 }
 
 /**
- * DM: the wake-word is required only to *start* a flow while idle; once a
- * flow is active, every message is addressed without it. Group: the
- * wake-word or an @mention is required on every single turn, active flow or
- * not — a group chat has other participants, so silence can't be read as
- * "still talking to the bot."
+ * DM: always addressed — no wake-word required, idle or mid-flow. A 1:1 DM
+ * has no ambiguity about who a message is for, so requiring "tinypay" first
+ * was friction, not disambiguation; the wake-word is still recognized and
+ * stripped if someone types it out of habit, just never required. Group:
+ * the wake-word or an @mention is required on every single turn, active
+ * flow or not — a group chat has other participants, so silence can't be
+ * read as "still talking to the bot."
  */
 @Injectable()
 export class InvocationGate {
   check(input: GateInput): GateResult {
-    const { surface, isActiveFlow, text } = input;
+    const { surface, text } = input;
 
     if (isGroupSurface(surface)) {
       const wakeMatch = WAKE_WORD.exec(text);
@@ -67,21 +67,8 @@ export class InvocationGate {
       return { addressed: false, utterance: text.trim() };
     }
 
-    // Mid-flow, the wake word is never required to be addressed — but if the
-    // user includes it anyway (a reasonable habit once they've learned it),
-    // it must still be stripped before reaching the step's own validate(),
-    // the same as the idle path below does. Leaving it in silently corrupts
-    // free-text input ("tinypay 500" failing to parse as an amount).
     const wakeMatch = WAKE_WORD.exec(text);
     const stripped = wakeMatch ? text.slice(wakeMatch[0].length).trim() : text.trim();
-
-    if (isActiveFlow) {
-      return { addressed: true, utterance: stripped };
-    }
-
-    if (wakeMatch) {
-      return { addressed: true, utterance: stripped };
-    }
-    return { addressed: false, utterance: stripped };
+    return { addressed: true, utterance: stripped };
   }
 }

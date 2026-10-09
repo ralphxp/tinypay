@@ -4,56 +4,42 @@ describe('InvocationGate', () => {
   const gate = new InvocationGate();
 
   describe('DM', () => {
-    it('idle: requires the wake-word to be addressed', () => {
-      const result = gate.check({ surface: 'telegram_dm', isActiveFlow: false, text: 'balance' });
-      expect(result.addressed).toBe(false);
-    });
-
-    it('idle: wake-word (case-insensitive) addresses and is stripped', () => {
-      const result = gate.check({ surface: 'telegram_dm', isActiveFlow: false, text: 'TinyPay balance' });
+    it('always addressed, wake-word or not — a 1:1 DM has no ambiguity about who a message is for', () => {
+      const result = gate.check({ surface: 'telegram_dm', text: 'balance' });
       expect(result).toEqual({ addressed: true, utterance: 'balance' });
     });
 
-    it('mid-flow: does not require the wake-word', () => {
-      const result = gate.check({ surface: 'telegram_dm', isActiveFlow: true, text: '5000' });
+    it('a wake-word prefix (case-insensitive) is still recognized and stripped if someone types it out of habit', () => {
+      const result = gate.check({ surface: 'telegram_dm', text: 'TinyPay balance' });
+      expect(result).toEqual({ addressed: true, utterance: 'balance' });
+    });
+
+    it('mid-flow free text needs no wake-word at all', () => {
+      const result = gate.check({ surface: 'telegram_dm', text: '5000' });
       expect(result).toEqual({ addressed: true, utterance: '5000' });
     });
 
-    it('mid-flow: a wake-word prefix included out of habit is still stripped — regression for a real bug where "tinypay 500" reached a step as literal text and failed to parse as an amount', () => {
-      const result = gate.check({ surface: 'telegram_dm', isActiveFlow: true, text: 'tinypay 500' });
+    it('a wake-word prefix included out of habit mid-flow is still stripped — regression for a real bug where "tinypay 500" reached a step as literal text and failed to parse as an amount', () => {
+      const result = gate.check({ surface: 'telegram_dm', text: 'tinypay 500' });
       expect(result).toEqual({ addressed: true, utterance: '500' });
     });
   });
 
   describe('group', () => {
-    it('idle: requires the wake-word or an @mention every turn', () => {
-      const result = gate.check({ surface: 'telegram_group', isActiveFlow: false, text: 'balance' });
+    it('requires the wake-word or an @mention every turn — a group has other participants, so silence can\'t be read as "still talking to the bot"', () => {
+      const result = gate.check({ surface: 'telegram_group', text: 'balance' });
       expect(result.addressed).toBe(false);
     });
 
-    it('mid-flow: STILL requires the wake-word or mention every turn', () => {
-      const result = gate.check({ surface: 'telegram_group', isActiveFlow: true, text: '5000' });
-      expect(result.addressed).toBe(false);
-    });
-
-    it('mid-flow with the wake-word: addressed', () => {
-      const result = gate.check({ surface: 'telegram_group', isActiveFlow: true, text: 'tinypay 5000' });
+    it('the wake-word addresses and is stripped', () => {
+      const result = gate.check({ surface: 'telegram_group', text: 'tinypay 5000' });
       expect(result).toEqual({ addressed: true, utterance: '5000' });
     });
 
     it('an @mention addresses without the wake-word', () => {
-      const result = gate.check({
-        surface: 'telegram_group',
-        isActiveFlow: false,
-        text: '@tinypay balance',
-      });
+      const result = gate.check({ surface: 'telegram_group', text: '@tinypay balance' });
       expect(result).toEqual({ addressed: true, utterance: 'balance' });
     });
-  });
-
-  it('not-addressed + idle is ignored by the caller (addressed: false, no error)', () => {
-    const result = gate.check({ surface: 'telegram_dm', isActiveFlow: false, text: 'random chatter' });
-    expect(result.addressed).toBe(false);
   });
 });
 
