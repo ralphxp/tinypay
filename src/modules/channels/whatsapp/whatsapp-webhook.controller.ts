@@ -1,12 +1,17 @@
 import { Body, Controller, Header, Headers, HttpCode, Post, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '../../../config/config.service.js';
+import { PrismaService } from '../../../infra/database/prisma.service.js';
 import { validateTwilioSignature } from './twilio-signature.js';
 import { WhatsAppAdapter } from './whatsapp.adapter.js';
+
+const TWIML_ACK = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
 @Controller('webhooks/whatsapp')
 export class WhatsAppWebhookController {
   constructor(
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsAppAdapter,
   ) {}
 
@@ -25,8 +30,21 @@ export class WhatsAppWebhookController {
       }
     }
 
+    // Twilio retries a webhook delivery that doesn't get a timely response —
+    // same double-processing risk (and fix) as TelegramWebhookController.
+    if (body.MessageSid) {
+      const eventId = `whatsapp:${body.MessageSid}`;
+      try {
+        await this.prisma.processedWebhookEvent.create({ data: { eventId, provider: 'whatsapp' } });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          return TWIML_ACK;
+        }
+        throw err;
+      }
+    }
+
     await this.whatsapp.handleIncoming(body);
-    // Twilio expects TwiML (even empty) for a 200 on this webhook.
-    return '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+    return TWIML_ACK;
   }
 }
