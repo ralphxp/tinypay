@@ -14,7 +14,12 @@ services:
     # stops Render's own implicit `npm install` from running first (which is
     # what actually broke the first deploy: it installed without devDependencies,
     # so `nest` — the build tool, from @nestjs/cli — was never on disk).
-    buildCommand: corepack enable; pnpm install --frozen-lockfile; pnpm exec prisma migrate deploy; pnpm run build;
+    # prisma generate is explicit here, not left to package.json's postinstall
+    # hook — a frozen-lockfile install that finds node_modules already
+    # satisfying the (unchanged) lockfile can skip re-running postinstall
+    # entirely, which once left a stale Prisma Client (missing a newly added
+    # model) baked into a build whose only change was to schema.prisma.
+    buildCommand: corepack enable; pnpm install --frozen-lockfile; pnpm exec prisma generate; pnpm exec prisma migrate deploy; pnpm run build;
     startCommand: node dist/main
     envVars:
       - key: NODE_ENV
