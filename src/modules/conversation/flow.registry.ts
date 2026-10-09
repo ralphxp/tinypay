@@ -31,7 +31,7 @@ export class FlowRegistry {
     users: UserService,
   ) {
     this.flows = {
-      fund: createFundFlow({ wallet, paystack }),
+      fund: createFundFlow({ wallet, paystack, users }),
       airtime: createAirtimeFlow({ wallet, biller, notifications }),
       data: createDataFlow({ wallet, biller, notifications }),
       onboarding: createOnboardingFlow({ users }),

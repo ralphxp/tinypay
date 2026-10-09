@@ -38,7 +38,7 @@ describe('WalletService: money lives in Paystack, this is bookkeeping', () => {
       expect(await wallet.getBalance(userId)).toBe(0n); // reserving alone never moves the balance
 
       const credited = await wallet.completeFund(ref, 'psp_ref_1');
-      expect(credited).toEqual({ userId, amountMinor: 500_00n });
+      expect(credited).toEqual({ userId, amountMinor: 500_00n, feeMinor: 0n });
       expect(await wallet.getBalance(userId)).toBe(500_00n);
     });
 

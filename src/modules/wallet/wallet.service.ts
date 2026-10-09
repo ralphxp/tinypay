@@ -7,7 +7,10 @@ export interface ReserveFundInput {
   userId: string;
   /** Idempotency ref — unique on wallet_transactions.ref. The exact value also sent to Paystack as `reference`. */
   ref: string;
+  /** Credited to the wallet on completion — never includes the fee. */
   amountMinor: bigint;
+  /** Paystack's processing cost, charged on top of amountMinor (see shared/utils/fees.ts) — not credited, TinyPay's revenue. */
+  feeMinor?: bigint;
 }
 
 export interface ReserveDebitInput {
@@ -75,6 +78,7 @@ export class WalletService {
           userId: input.userId,
           type: 'fund',
           amountMinor: input.amountMinor,
+          feeMinor: input.feeMinor ?? 0n,
           status: 'pending',
         },
       });
@@ -95,7 +99,10 @@ export class WalletService {
    * an already-completed ref is a no-op. Returns null for a ref this app
    * never reserved (nothing to credit, nobody to notify).
    */
-  async completeFund(ref: string, providerRef: string): Promise<{ userId: string; amountMinor: bigint } | null> {
+  async completeFund(
+    ref: string,
+    providerRef: string,
+  ): Promise<{ userId: string; amountMinor: bigint; feeMinor: bigint } | null> {
     return this.prisma.$transaction(async (tx) => {
       const result = await tx.walletTransaction.updateMany({
         where: { ref, status: 'pending' },
@@ -108,7 +115,7 @@ export class WalletService {
         where: { id: txn.walletId },
         data: { balanceMinor: { increment: txn.amountMinor } },
       });
-      return { userId: txn.userId, amountMinor: txn.amountMinor };
+      return { userId: txn.userId, amountMinor: txn.amountMinor, feeMinor: txn.feeMinor };
     });
   }
 

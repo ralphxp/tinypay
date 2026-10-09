@@ -7,6 +7,8 @@ export interface WalletFundedIntent {
   kind: 'wallet_funded';
   userId: string;
   amountMinor: bigint;
+  /** Paystack's processing cost, charged on top — see shared/utils/fees.ts. 0 pre-dates the fee. */
+  feeMinor: bigint;
   ref: string;
 }
 
@@ -50,8 +52,11 @@ export class LoggingNotificationSink implements NotificationSink {
 
   emit(intent: NotificationIntent): void {
     this.emitted.push(intent);
+    // A generic replacer, not per-field conversions — every intent carries
+    // at least one bigint (amountMinor), some carry more (feeMinor), and
+    // JSON.stringify throws on any of them left as-is.
     this.logger.log(
-      `Notification intent: ${JSON.stringify({ ...intent, amountMinor: intent.amountMinor.toString() })}`,
+      `Notification intent: ${JSON.stringify(intent, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))}`,
     );
   }
 

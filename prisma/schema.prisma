@@ -95,6 +95,9 @@ model WalletTransaction {
   userId      String                   @map("user_id")
   type        WalletTransactionType
   amountMinor BigInt                   @map("amount_minor")
+  /// fund only — Paystack's processing cost, passed through to the user on
+  /// top of amountMinor (see shared/utils/fees.ts); 0 for airtime/data.
+  feeMinor    BigInt                   @default(0) @map("fee_minor")
   status      WalletTransactionStatus  @default(pending)
 
   // Paystack transaction reference (fund) or Bigisub order id (airtime/data).

@@ -143,6 +143,35 @@ describe('Money flows: fund / airtime / data, end to end through ConversationSer
       expect(reply?.text).toContain('Tap to pay');
       expect(reply?.text).toContain('₦1,000.00');
     });
+
+    it("the 1.5% fee is charged on top at Paystack, never deducted from what the wallet credits", async () => {
+      const fetchMock = vi.fn(() =>
+        Promise.resolve(
+          jsonResponse(200, {
+            status: true,
+            message: 'ok',
+            data: { authorization_url: 'https://checkout.paystack.com/fee-test', access_code: 'x', reference: 'ignored' },
+          }),
+        ),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const phone = await enrolledPhone();
+      const user = await users.findByPhone(phone);
+
+      const reply = await conversation.handleText(dm(phone, 'tinypay fund 1000'));
+      // ₦1,000.00 requested; 1.5% = ₦15.00 fee; ₦1,015.00 actually charged.
+      expect(reply?.text).toContain('₦1,015.00');
+      expect(reply?.text).toContain('₦15.00');
+
+      // Paystack is told to charge the fee-inclusive amount (kobo), not the bare requested amount.
+      const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+      expect(body.amount).toBe(101_500);
+
+      const txn = (await wallet.listTransactions(user!.id, 1))[0]!;
+      expect(txn.amountMinor).toBe(1000_00n); // what the wallet will credit
+      expect(txn.feeMinor).toBe(15_00n); // TinyPay's cut, not credited
+    });
   });
 
   describe('airtime', () => {

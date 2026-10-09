@@ -65,7 +65,7 @@ describe('PaystackWebhookController: verify before trust, wallet credit inline, 
     expect(result).toEqual({ received: true });
     expect(await wallet.getBalance(userId)).toBe(500_00n);
     expect(sink.getEmitted().slice(before)).toEqual([
-      { kind: 'wallet_funded', userId, amountMinor: 500_00n, ref },
+      { kind: 'wallet_funded', userId, amountMinor: 500_00n, feeMinor: 0n, ref },
     ]);
   });
 

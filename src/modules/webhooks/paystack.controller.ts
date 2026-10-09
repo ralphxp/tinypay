@@ -80,6 +80,7 @@ export class PaystackWebhookController {
           kind: 'wallet_funded',
           userId: credited.userId,
           amountMinor: credited.amountMinor,
+          feeMinor: credited.feeMinor,
           ref: reference,
         });
       }

@@ -3,7 +3,16 @@ import { TelegramSenderService } from '../channels/telegram/telegram-sender.serv
 import { ErrorLogService } from '../../infra/error-log/error-log.service.js';
 import { NETWORK_LABEL } from '../../shared/utils/network-label.js';
 import { formatNaira } from '../../shared/utils/format-money.js';
+import { formatReceiptDate } from '../../shared/utils/format-date.js';
 import type { NotificationIntent, NotificationSink } from './notification.port.js';
+
+/** A receipt is a fixed field order, one "Label: value" per line — never a
+ * prose sentence, so a user can screenshot it as actual proof of payment. */
+function receiptLines(ref: string, fields: [string, string][]): string {
+  return ['Receipt', `Ref: ${ref}`, `Date: ${formatReceiptDate(new Date())}`, ...fields.map(([k, v]) => `${k}: ${v}`)].join(
+    '\n',
+  );
+}
 
 /**
  * Customer-facing copy only — never interpolates a provider's raw error
@@ -14,11 +23,23 @@ import type { NotificationIntent, NotificationSink } from './notification.port.j
  */
 function copyFor(intent: NotificationIntent): string {
   switch (intent.kind) {
-    case 'wallet_funded':
-      return `Funding received: ${formatNaira(intent.amountMinor)} credited to your wallet.`;
+    case 'wallet_funded': {
+      const fields: [string, string][] = [['Type', 'Wallet funding'], ['Amount', formatNaira(intent.amountMinor)]];
+      if (intent.feeMinor > 0n) {
+        fields.push(['Fee', formatNaira(intent.feeMinor)], ['Total paid', formatNaira(intent.amountMinor + intent.feeMinor)]);
+      }
+      fields.push(['Status', 'Completed']);
+      return receiptLines(intent.ref, fields);
+    }
     case 'purchase_completed': {
       const label = intent.type === 'airtime' ? 'Airtime' : 'Data';
-      return `${label} sent: ${formatNaira(intent.amountMinor)} ${NETWORK_LABEL[intent.network]} to ${intent.recipientPhone}.`;
+      return receiptLines(intent.ref, [
+        ['Type', label],
+        ['Amount', formatNaira(intent.amountMinor)],
+        ['Network', NETWORK_LABEL[intent.network]],
+        ['Recipient', intent.recipientPhone],
+        ['Status', 'Completed'],
+      ]);
     }
     case 'purchase_failed': {
       const label = intent.type === 'airtime' ? 'Airtime' : 'Data';
