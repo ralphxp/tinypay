@@ -18,6 +18,11 @@ describe('InvocationGate', () => {
       const result = gate.check({ surface: 'telegram_dm', isActiveFlow: true, text: '5000' });
       expect(result).toEqual({ addressed: true, utterance: '5000' });
     });
+
+    it('mid-flow: a wake-word prefix included out of habit is still stripped — regression for a real bug where "tinypay 500" reached a step as literal text and failed to parse as an amount', () => {
+      const result = gate.check({ surface: 'telegram_dm', isActiveFlow: true, text: 'tinypay 500' });
+      expect(result).toEqual({ addressed: true, utterance: '500' });
+    });
   });
 
   describe('group', () => {

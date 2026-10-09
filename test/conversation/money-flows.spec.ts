@@ -95,6 +95,34 @@ describe('Money flows: fund / airtime / data, end to end through ConversationSer
       expect(await wallet.getBalance(user!.id)).toBe(0n);
     });
 
+    it('a mid-flow reply still prefixed with the wake word out of habit (real user behavior, via handleText — not advance() directly) still parses correctly', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+          Promise.resolve(
+            jsonResponse(200, {
+              status: true,
+              message: 'ok',
+              data: { authorization_url: 'https://checkout.paystack.com/xyz789', access_code: 'xyz', reference: 'ignored' },
+            }),
+          ),
+        ),
+      );
+
+      const phone = await enrolledPhone();
+
+      const seeded = await conversation.handleText(dm(phone, 'tinypay fund'));
+      expect(seeded?.text).toContain('How much');
+
+      // A real user, having learned "tinypay" starts every message, keeps
+      // typing it even mid-flow — handleText (not advance() directly) is
+      // what actually exercises InvocationGate's wake-word stripping.
+      const result = await conversation.handleText(dm(phone, 'tinypay 500'));
+
+      expect(result?.text).toContain('Tap to pay');
+      expect(result?.text).toContain('https://checkout.paystack.com/xyz789');
+    });
+
     it('a fully-specified "tinypay fund 1000" seeds straight past the amount question', async () => {
       vi.stubGlobal(
         'fetch',

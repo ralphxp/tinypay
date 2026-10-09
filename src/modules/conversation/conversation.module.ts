@@ -12,6 +12,9 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
 @Module({
   imports: [NluModule, IdentityModule, WalletModule, PaymentsModule, NotificationsModule],
   providers: [ConversationService, StateStore, FlowRegistry, InvocationGate],
-  exports: [ConversationService, StateStore],
+  // FlowRegistry is exported for WhatsAppAdapter, which (unlike Telegram's
+  // inline keyboards) has to re-derive a step's choices itself to translate
+  // a numbered text reply back into the tapped value — see its docstring.
+  exports: [ConversationService, StateStore, FlowRegistry],
 })
 export class ConversationModule {}

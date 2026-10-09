@@ -16,11 +16,13 @@ export const configSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
-  WA_PHONE_NUMBER_ID: z.string().optional(),
-  WA_BUSINESS_ACCOUNT_ID: z.string().optional(),
-  WA_ACCESS_TOKEN: z.string().optional(),
-  WA_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
-  WA_APP_SECRET: z.string().optional(),
+  // WhatsApp via Twilio (not Meta's own Cloud API directly) — Twilio acts as
+  // the BSP, so auth/webhook-signing/send-message all go through Twilio's
+  // own API shape, not Meta's Graph API.
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  /** The sandbox (or, later, a real approved) WhatsApp sender, e.g. "whatsapp:+14155238886". */
+  TWILIO_WHATSAPP_NUMBER: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof configSchema>;

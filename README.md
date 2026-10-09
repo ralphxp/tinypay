@@ -32,6 +32,10 @@ pnpm run prisma:migrate:direct # migrate dev, via DIRECT_URL (use if DATABASE_UR
 
 Health check: `GET /health` — reports Postgres and Telegram-bot readiness.
 
+### WhatsApp
+
+Via Twilio (as the BSP), not Meta's Cloud API directly — set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_WHATSAPP_NUMBER`, point the sandbox's "when a message comes in" webhook at `https://<your-url>/webhooks/whatsapp`. No separate enrollment/linking step like Telegram needs (Twilio's `From` is already a verified phone), and no native tappable buttons on the sandbox — every choice renders as a numbered text list, and a bare number reply is translated back to the tapped value (see `WhatsAppAdapter.resolveNumberedReply`).
+
 ## Scope
 
 - Create a wallet (implicit — one per enrolled user)

@@ -67,14 +67,21 @@ export class InvocationGate {
       return { addressed: false, utterance: text.trim() };
     }
 
+    // Mid-flow, the wake word is never required to be addressed — but if the
+    // user includes it anyway (a reasonable habit once they've learned it),
+    // it must still be stripped before reaching the step's own validate(),
+    // the same as the idle path below does. Leaving it in silently corrupts
+    // free-text input ("tinypay 500" failing to parse as an amount).
+    const wakeMatch = WAKE_WORD.exec(text);
+    const stripped = wakeMatch ? text.slice(wakeMatch[0].length).trim() : text.trim();
+
     if (isActiveFlow) {
-      return { addressed: true, utterance: text.trim() };
+      return { addressed: true, utterance: stripped };
     }
 
-    const wakeMatch = WAKE_WORD.exec(text);
     if (wakeMatch) {
-      return { addressed: true, utterance: text.slice(wakeMatch[0].length).trim() };
+      return { addressed: true, utterance: stripped };
     }
-    return { addressed: false, utterance: text.trim() };
+    return { addressed: false, utterance: stripped };
   }
 }
