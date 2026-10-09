@@ -122,6 +122,28 @@ model ProcessedWebhookEvent {
   @@map("processed_webhook_events")
 }
 
+/// Operator-only error log — detail that must never reach a customer (raw
+/// provider errors, stack traces, internal context) but that an operator
+/// needs to actually diagnose a failure, instead of grepping Render logs.
+/// Written by AllExceptionsFilter (anything uncaught at the HTTP layer) and
+/// by TelegramNotificationDispatcher (a purchase_failed intent's real
+/// provider reason, which copyFor() deliberately keeps out of the customer
+/// message — see that file).
+model ServerErrorLog {
+  id        String   @id @default(cuid())
+  /// Where this came from: a provider name ("bigisub", "paystack"), a layer
+  /// ("http"), or similar — not a strict enum, since this will grow.
+  source    String
+  message   String
+  stack     String?
+  /// Free-form structured detail (userId, ref, request path, ...).
+  context   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("server_error_logs")
+}
+
 /// Backs the conversation FSM's StateStore — no Redis in this build, so
 /// session data, the optimistic-concurrency version, and the short-lived
 /// per-session mutex (lockToken/lockExpiresAt) all live in one row. Sessions

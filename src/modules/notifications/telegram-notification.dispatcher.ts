@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TelegramSenderService } from '../channels/telegram/telegram-sender.service.js';
+import { ErrorLogService } from '../../infra/error-log/error-log.service.js';
 import { NETWORK_LABEL } from '../../shared/utils/network-label.js';
 import { formatNaira } from '../../shared/utils/format-money.js';
 import type { NotificationIntent, NotificationSink } from './notification.port.js';
@@ -39,14 +40,24 @@ function copyFor(intent: NotificationIntent): string {
 export class TelegramNotificationDispatcher implements NotificationSink {
   private readonly logger = new Logger(TelegramNotificationDispatcher.name);
 
-  constructor(private readonly sender: TelegramSenderService) {}
+  constructor(
+    private readonly sender: TelegramSenderService,
+    private readonly errorLog: ErrorLogService,
+  ) {}
 
   emit(intent: NotificationIntent): void {
     if (intent.kind === 'purchase_failed') {
       // Server-side only — the provider's raw reason (balances, field
       // names, provider identity) must never reach the customer, but it's
       // still the thing an operator needs to actually diagnose a failure.
+      // Persisted (not just logged) so it survives past Render's ephemeral
+      // log retention and is queryable later.
       this.logger.warn(`purchase_failed ref=${intent.ref} userId=${intent.userId}: ${intent.reason}`);
+      this.errorLog.log({
+        source: 'purchase_failed',
+        message: intent.reason,
+        context: { ref: intent.ref, userId: intent.userId, type: intent.type, amountMinor: intent.amountMinor.toString() },
+      });
     }
     const text = copyFor(intent);
     this.sender.sendToUser(intent.userId, { text }).catch((err: unknown) => {
