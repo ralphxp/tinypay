@@ -11,6 +11,17 @@ interface BigisubEnvelope<T> {
   success: boolean;
   message: string;
   data: T;
+  /** Only present on a validation failure (400) — field name -> list of messages,
+   * e.g. {"amount": ["Insufficient balance. You need ₦495.00 but have ₦100.00..."]}.
+   * `message` alone is just "Validation failed" with no detail, so this is folded
+   * into the thrown error below rather than discarded. */
+  errors?: Record<string, string[]>;
+}
+
+function formatEnvelopeError(path: string, status: number, message: string, errors?: Record<string, string[]>): string {
+  if (!errors) return message || `Bigisub request to ${path} failed with status ${status}`;
+  const detail = Object.values(errors).flat().join('; ');
+  return detail ? `${message}: ${detail}` : message;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -80,7 +91,7 @@ export class BigisubClient {
     if (!response.ok || !json.success) {
       const retryable = response.status >= 500;
       throw new ProviderResponseError(
-        json.message || `Bigisub request to ${path} failed with status ${response.status}`,
+        formatEnvelopeError(path, response.status, json.message, json.errors),
         response.status,
         retryable,
       );
